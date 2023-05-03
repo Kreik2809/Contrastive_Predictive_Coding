@@ -34,17 +34,36 @@ class CpcModel(nn.Module):
         self.ar = AutoregressiveGRU(output_dim, hidden_dim)
         self.W = nn.Parameter(torch.randn((steps, output_dim, output_dim)))  
     
-    def forward(self, x_hist, x_neg, x_pos, step):
+    def forward(self, x):
+        #x is a list containing x_hist, x_pos, x_neg, step which are all tensors
+        x_hist = x[0]
+        x_pos = x[1]
+        x_neg = x[2]
+        step = x[3]
+
+        x_hist = x_hist.view(-1, x_hist.shape[2])
         z_hist = self.encoder(x_hist)
-        c_t = self.ar(z_hist)
+        z_hist = z_hist.view(x[0].shape[0], x[0].shape[1], -1)
+        c_t = self.ar(z_hist) #batch dim
+        c_t = c_t.squeeze(0) #remove batch dim
         
+        x_neg = x_neg.view(-1, x_neg.shape[2])
         z_neg = self.encoder(x_neg)
         z_pos = self.encoder(x_pos)
 
-        f_neg = torch.exp(torch.matmul(c_t, torch.matmul(self.W[step], z_neg)))
-        f_pos = torch.exp(torch.matmul(c_t, torch.matmul(self.W[step], z_pos)))
+        #print(c_t.shape) #torch.Size([64, 2400])
+        #print(z_neg.shape) #torch.Size([640, 2400]) => 64,2400 ?
+        #print(z_pos.shape) #torch.Size([64, 2400])
 
-        return f_neg, f_pos
+        f_pos = torch.matmul(z_pos, torch.matmul(self.W[step-1], c_t.T))
+        f_neg = torch.matmul(z_neg, torch.matmul(self.W[step-1], c_t.T))
+
+        #print(f_pos.shape) #torch.Size([64, 64, 64])
+        #print(f_neg.shape) #torch.Size([64, 640, 64])
+        f_neg = f_neg.sum(dim=1)
+        #print(f_neg.shape) #torch.Size([64, 64])
+
+        return - (torch.exp(f_pos)/torch.exp(f_neg)) #NAN bc of torch.exp
         
 if __name__ == "__main__":
     sentence = "Hello I am Nicolas"
@@ -53,11 +72,10 @@ if __name__ == "__main__":
     batch = torch.stack([tokenized_sentence, tokenized_sentence, tokenized_sentence])
     model = SentenceEncoder(5, 128, 2400)
     output = model(batch)
-    print(output)
     print(output.shape)
-
+    print(output.unsqueeze(0).shape)
     model = AutoregressiveGRU(2400, 2400)
-    output = model(output)
+    output = model(output.unsqueeze(0)) #batch dim
     print(output)
     print(output.shape)
     
