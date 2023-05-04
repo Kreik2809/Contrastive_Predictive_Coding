@@ -48,7 +48,7 @@ class BookCorpus():
 
     def get_item(self, idx):
         sentence = self.df["text"].iloc[idx] 
-        sentence = [self.word2idx[word] for word in sentence.split()] #Tokenize TODO add unk if word not in vocab
+        sentence = [self.word2idx[word] if word in self.word2idx else self.word2idx["<unk>"] for word in sentence.split()] #Tokenize
         sentence = sentence + [self.word2idx["<pad>"]]*(self.longest_sent - len(sentence)) #Pad
         return torch.tensor(sentence)
 

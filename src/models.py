@@ -9,6 +9,7 @@ class SentenceEncoder(nn.Module):
         self.relu = nn.ReLU()
     
     def forward(self, x):
+        #x is a tensor of size (batch_size, elem_seq, seq_len)
         embeddings = self.embedding(x)
         embeddings = torch.permute(embeddings, (0, 2, 1))
         conv_out = self.conv1(embeddings)
@@ -27,43 +28,77 @@ class AutoregressiveGRU(nn.Module):
         return x
 
 class CpcModel(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, output_dim, hidden_dim, steps = 3):
+    def __init__(self, vocab_size, embedding_dim, output_dim, hidden_dim):
         super(CpcModel, self).__init__()
-        self.steps = steps
         self.encoder = SentenceEncoder(vocab_size, embedding_dim, output_dim)
         self.ar = AutoregressiveGRU(output_dim, hidden_dim)
-        self.W = nn.Parameter(torch.randn((steps, output_dim, output_dim)))  
+        #create a linear layer for each step
+        self.W = nn.Linear(hidden_dim+1, hidden_dim) 
     
     def forward(self, x):
         #x is a list containing x_hist, x_pos, x_neg, step which are all tensors
-        x_hist = x[0]
-        x_pos = x[1]
-        x_neg = x[2]
+        x_hist = x[0] #64 10 132
+        x_pos = x[1].unsqueeze(1) #64 1 132
+        x_neg = x[2] #64 10 132 #concatenate 
         step = x[3]
 
-        x_hist = x_hist.view(-1, x_hist.shape[2])
-        z_hist = self.encoder(x_hist)
-        z_hist = z_hist.view(x[0].shape[0], x[0].shape[1], -1)
-        c_t = self.ar(z_hist) #batch dim
-        c_t = c_t.squeeze(0) #remove batch dim
+        #print(x_hist.shape) #64 10 132
+        #print(x_pos.shape) #64 1 132
+        #print(x_neg.shape) #64 10 132
+
+        hist_size = x_hist.shape[1]
+        pos_size = x_pos.shape[1]
+        neg_size = x_neg.shape[1]
+        batch_size = x_hist.shape[0]
+
+        #concat x_hist and x_pos and x_neg along axis 1
+        x = torch.cat((x_hist, x_pos, x_neg), dim=1) #64 21 132
+        #print(x.shape) #64 21 132
+        total_size = x.shape[1]
+
+        #encode x
+        x = x.view(-1, x.shape[2]) #64*21 132
+        z = self.encoder(x) #64*21 2400
+
+        z = z.view(batch_size, total_size, -1) #64 21 2400
+
+        z_hist = z[:, :hist_size, :] #64 10 2400
+        z_pos = z[:, hist_size:hist_size+pos_size, :] #64 1 2400
+        z_neg = z[:, hist_size+pos_size:, :] #64 10 2400
+
+        #print(z_hist.shape)
+        #print(z_pos.shape)
+        #print(z_neg.shape)
+
+        c_t = self.ar(z_hist) 
+        c_t = c_t.squeeze(0)    
+
+        c_t_step = torch.cat((c_t, step.unsqueeze(1)), dim=1)
+
+        preds = self.W(c_t_step)
+        #print(preds.shape) #64 2400
+        #print(z_pos.shape) #64 1 2400
+        #print(z_neg.shape) #64 10 2400
+
+        #perform elementwise multiplication between preds and z_pos and z_neg
+        f_pos = torch.exp(torch.bmm(preds.unsqueeze(1), z_pos.permute(0, 2, 1)).squeeze(1))
+        f_neg = torch.exp(torch.bmm(preds.unsqueeze(1), z_neg.permute(0, 2, 1)).squeeze(1))
+
+        #print(f_pos.shape) #64 1
+        #print(f_neg.shape) #64 10
         
-        x_neg = x_neg.view(-1, x_neg.shape[2])
-        z_neg = self.encoder(x_neg)
-        z_pos = self.encoder(x_pos)
+        accuracy = torch.sum(torch.diag(f_pos > f_neg.max(dim=1)[0])).item() / batch_size
 
-        #print(c_t.shape) #torch.Size([64, 2400])
-        #print(z_neg.shape) #torch.Size([640, 2400]) => 64,2400 ?
-        #print(z_pos.shape) #torch.Size([64, 2400])
+        loss = torch.log(f_pos / (f_pos + f_neg))
 
-        f_pos = torch.matmul(z_pos, torch.matmul(self.W[step-1], c_t.T))
-        f_neg = torch.matmul(z_neg, torch.matmul(self.W[step-1], c_t.T))
+        return -loss, accuracy
 
-        #print(f_pos.shape) #torch.Size([64, 64, 64])
-        #print(f_neg.shape) #torch.Size([64, 640, 64])
-        f_neg = f_neg.sum(dim=1)
-        #print(f_neg.shape) #torch.Size([64, 64])
+    def save(self, path):
+        torch.save(self.state_dict(), path)
+    
+    def load(self, path):
+        self.load_state_dict(torch.load(path))        
 
-        return - (torch.exp(f_pos)/torch.exp(f_neg)) #NAN bc of torch.exp
         
 if __name__ == "__main__":
     sentence = "Hello I am Nicolas"
