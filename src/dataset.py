@@ -8,14 +8,14 @@ import pandas as pd
 from torch.utils.data import Dataset
 from datasets import load_dataset
 
-def download_dataset(subset_size=None):
+def download_dataset(dataset_name="bookcorpus", subset_size=None):
     if (not os.path.exists('../data')):
         os.makedirs('../data')
-    train_ds = load_dataset("bookcorpus")
+    train_ds = load_dataset(dataset_name)
     train_ds = train_ds['train']
     if subset_size is not None:
         train_ds = train_ds.select(range(int(len(train_ds)*subset_size)))
-    train_ds.to_csv('../data/bookcorpus.csv')
+    train_ds.to_csv('../data/'+dataset_name+'.csv', index=False)
 
 def tokenizeDataset(csv_file):
     df = pd.read_csv(csv_file)
@@ -35,11 +35,12 @@ def tokenizeDataset(csv_file):
     with open('../data/idx2word.json', 'w') as f:
         json.dump(idx2word, f)
     
-class BookCorpus():
+class NLPDataset():
     """ This dataset contains the sentences from the bookcorpus dataset
     """
-    def __init__(self):
-        self.df = pd.read_csv("../data/bookcorpus.csv")
+    def __init__(self, csv_file="../data/bookcorpus.csv"):
+        self.df = pd.read_csv(csv_file)
+        self.df['text'] = self.df['text'].apply(lambda x: x.lower())
         self.longest_sent = len(max(self.df['text'], key=len).split())
         self.word2idx = json.load(open('../data/word2idx.json', 'r'))
     
@@ -84,7 +85,6 @@ class CPCDataset(Dataset):
 
 
 if __name__ == "__main__":
-    download_dataset(subset_size=0.01)
-    tokenizeDataset('../data/bookcorpus.csv')
+    download_dataset("trec", subset_size=0.1)
     #dataset = BookCorpus()
     #print(dataset.df.head())

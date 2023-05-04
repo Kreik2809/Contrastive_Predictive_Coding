@@ -93,11 +93,14 @@ class CpcModel(nn.Module):
 
         return -loss, accuracy
 
-    def save(self, path):
-        torch.save(self.state_dict(), path)
+    def save(self, file_name):
+        torch.save(self.encoder.state_dict(), file_name + "_encoder.pt")
+        torch.save(self.ar.state_dict(), file_name + "_ar.pt")
+        torch.save(self.state_dict(), file_name)
     
     def load(self, path):
-        self.load_state_dict(torch.load(path))        
+        self.load_state_dict(torch.load(path))
+               
 
         
 if __name__ == "__main__":

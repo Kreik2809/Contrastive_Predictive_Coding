@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 
 def train():
-    dataset = BookCorpus()
+    dataset = NLPDataset()
     dataset.df = dataset.df[:300]
     
     cpc_dataset = CPCDataset(dataset)
@@ -20,7 +20,7 @@ def train():
     output_dim = 2400
     hidden_dim = 2400
     batch_size = 64
-    epochs = 10
+    epochs = 1
     model = CpcModel(vocab_size, embedding_dim, output_dim, hidden_dim)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=10e-5)
@@ -64,7 +64,7 @@ def train():
         train_accuracy_hist = np.append(train_accuracy_hist, acc_batch.mean())
         val_accuracy_hist = np.append(val_accuracy_hist, val_acc_batch.mean())
 
-    model.save("model.pt")
+    model.save("model")
 
     plt.figure(figsize=(10,10))
     plt.plot(train_loss_hist, label="Train Loss")
