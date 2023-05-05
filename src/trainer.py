@@ -35,7 +35,10 @@ def train():
     val_loss_hist = np.array([])
     train_accuracy_hist = np.array([])
     val_accuracy_hist = np.array([])
+
     print("Start training")
+    patience = 10
+    patience_counter = 0
     for epoch in tqdm(range(epochs)):
         loss_batch = np.array([])
         acc_batch = np.array([])
@@ -56,6 +59,15 @@ def train():
                 val_loss = val_loss.mean()
                 val_loss_batch = np.append(val_loss_batch, [val_loss.detach().numpy()])
                 val_acc_batch = np.append(val_acc_batch, [val_accuracy])
+            
+
+        if val_loss_batch.mean() > val_loss_hist[-1]:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print("Early stopping")
+                break
+        else:
+            patience_counter = 0
 
         
         print("Epoch: {} Train Loss: {} Val Loss: {}".format(epoch, loss_batch.mean(), val_loss_batch.mean()))

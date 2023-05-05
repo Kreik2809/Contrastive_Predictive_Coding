@@ -17,7 +17,7 @@ def download_dataset(dataset_name="bookcorpus", subset_size=None, test=True):
     train_ds = ds['train']
     if subset_size is not None:
         train_ds = train_ds.select(range(int(len(train_ds)*subset_size)))
-    train_ds.to_csv('../data/'+dataset_name+'_train_reduce.csv', index=False)
+    train_ds.to_csv('../data/'+dataset_name+'_train.csv', index=False)
     if test:
         test_ds = ds['test']
         test_ds.to_csv('../data/'+dataset_name+'_test.csv', index=False)
@@ -43,9 +43,9 @@ def tokenizeDataset(csv_file):
 class NLPDataset():
     """ This dataset contains the sentences from the bookcorpus dataset
     """
-    def __init__(self, csv_file="../data/bookcorpus_train_reduce.csv"):
+    def __init__(self, csv_file="../data/bookcorpus_train.csv"):
         self.csv_file = csv_file
-        self.longest_sent = 132
+        self.longest_sent = 132 #TODO : find a way to get this value automatically
         self.word2idx = json.load(open('../data/word2idx.json', 'r'))
     
     def get_len(self):
@@ -69,7 +69,7 @@ class CPCDataset(Dataset):
     """ This dataset contains the triplets (history, positive, negative) indexes for contrastive learning
     #TODO : set a size for the cpc dataset for each row randomly select step t and create learning sample ?
     """
-    def __init__(self, dataset, history_samples=10, prediction_len=3, negative_samples=10):
+    def __init__(self, dataset, len, history_samples=10, prediction_len=3, negative_samples=10):
         self.dataset = dataset
         len_dataset = self.dataset.get_len() #Len of the dataset containing the sentences
         self.history_samples = history_samples
@@ -97,8 +97,8 @@ class CPCDataset(Dataset):
 
 if __name__ == "__main__":
     #download_dataset("trec")
-    #download_dataset("bookcorpus", subset_size=0.001 ,test=False)
-    #tokenizeDataset("../data/bookcorpus_train.csv")
+    #download_dataset("bookcorpus",test=False)
+    tokenizeDataset("../data/bookcorpus_train.csv")
     """
     print("Starting")
     dataset = NLPDataset()
