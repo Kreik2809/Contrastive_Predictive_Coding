@@ -16,6 +16,7 @@ from sklearn.metrics import accuracy_score
 
 def eval():
     dataset = NLPDataset("../data/trec.csv")
+    dataset.df = pd.read_csv(dataset.csv_file)
     for i in range(len(dataset.df)):
         dataset.df['text'].iloc[i] = dataset.get_item(i)
 

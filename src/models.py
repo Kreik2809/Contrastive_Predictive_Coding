@@ -96,7 +96,7 @@ class CpcModel(nn.Module):
     def save(self, file_name):
         torch.save(self.encoder.state_dict(), file_name + "_encoder.pt")
         torch.save(self.ar.state_dict(), file_name + "_ar.pt")
-        torch.save(self.state_dict(), file_name)
+        torch.save(self.state_dict(), file_name+".pt")
     
     def load(self, path):
         self.load_state_dict(torch.load(path))

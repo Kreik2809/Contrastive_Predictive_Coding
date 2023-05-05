@@ -10,17 +10,17 @@ import matplotlib.pyplot as plt
 
 
 def train():
+    print("Starting")
     dataset = NLPDataset()
-    dataset.df = dataset.df[:300]
-    
+    print(dataset.get_len())
     cpc_dataset = CPCDataset(dataset)
-
+    print("Dataset loaded")
     vocab_size = len(json.load(open('../data/word2idx.json', 'r')))
     embedding_dim = 128
     output_dim = 2400
     hidden_dim = 2400
     batch_size = 64
-    epochs = 1
+    epochs = 50
     model = CpcModel(vocab_size, embedding_dim, output_dim, hidden_dim)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=10e-5)
@@ -35,6 +35,7 @@ def train():
     val_loss_hist = np.array([])
     train_accuracy_hist = np.array([])
     val_accuracy_hist = np.array([])
+    print("Start training")
     for epoch in tqdm(range(epochs)):
         loss_batch = np.array([])
         acc_batch = np.array([])
@@ -64,19 +65,19 @@ def train():
         train_accuracy_hist = np.append(train_accuracy_hist, acc_batch.mean())
         val_accuracy_hist = np.append(val_accuracy_hist, val_acc_batch.mean())
 
-    model.save("model")
+    model.save("output/model")
 
     plt.figure(figsize=(10,10))
     plt.plot(train_loss_hist, label="Train Loss")
     plt.plot(val_loss_hist, label="Val Loss")
     plt.legend()
-    plt.savefig("loss.png")
+    plt.savefig("output/loss.png")
 
     plt.figure(figsize=(10,10))
     plt.plot(train_accuracy_hist, label="Train Accuracy")
     plt.plot(val_accuracy_hist, label="Val Accuracy")
     plt.legend()
-    plt.savefig("accuracy.png")
+    plt.savefig("output/accuracy.png")
         
 if __name__ == "__main__":
     torch.manual_seed(42)
