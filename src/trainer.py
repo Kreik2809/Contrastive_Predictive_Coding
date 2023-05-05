@@ -10,17 +10,21 @@ import matplotlib.pyplot as plt
 
 
 def train():
-    print("Starting")
-    dataset = NLPDataset()
-    print(dataset.get_len())
-    cpc_dataset = CPCDataset(dataset)
-    print("Dataset loaded")
-    vocab_size = len(json.load(open('../data/word2idx.json', 'r')))
     embedding_dim = 128
     output_dim = 2400
     hidden_dim = 2400
-    batch_size = 64
-    epochs = 50
+    batch_size = 2
+    epochs = 10
+    patience = 10
+    history_len = 10
+    negative_len = 10
+    print("Starting")
+    dataset = NLPDataset()
+    print(dataset.get_len())
+    cpc_dataset = CPCDataset(dataset, 100)
+    print("Dataset loaded")
+    vocab_size = len(json.load(open('../data/word2idx.json', 'r')))
+    
     model = CpcModel(vocab_size, embedding_dim, output_dim, hidden_dim)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=10e-5)
@@ -37,8 +41,7 @@ def train():
     val_accuracy_hist = np.array([])
 
     print("Start training")
-    patience = 10
-    patience_counter = 0
+
     for epoch in tqdm(range(epochs)):
         loss_batch = np.array([])
         acc_batch = np.array([])
@@ -59,16 +62,16 @@ def train():
                 val_loss = val_loss.mean()
                 val_loss_batch = np.append(val_loss_batch, [val_loss.detach().numpy()])
                 val_acc_batch = np.append(val_acc_batch, [val_accuracy])
-            
-
-        if val_loss_batch.mean() > val_loss_hist[-1]:
+   
+        if epoch == 0:
+            patience_counter = 0
+        elif val_loss_batch.mean() > val_loss_hist[-1]:
             patience_counter += 1
-            if patience_counter >= patience:
+            if patience_counter == patience:
                 print("Early stopping")
-                break
+                break   
         else:
             patience_counter = 0
-
         
         print("Epoch: {} Train Loss: {} Val Loss: {}".format(epoch, loss_batch.mean(), val_loss_batch.mean()))
         print("Epoch: {} Train Accuracy: {} Val Accuracy: {}".format(epoch, acc_batch.mean(), val_acc_batch.mean()))

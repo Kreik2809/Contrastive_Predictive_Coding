@@ -13,28 +13,33 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 
-
 def eval():
-    dataset = NLPDataset("../data/trec.csv")
-    dataset.df = pd.read_csv(dataset.csv_file)
-    for i in range(len(dataset.df)):
-        dataset.df['text'].iloc[i] = dataset.get_item(i)
+    csv_file = "../data/trec_test.csv"
+    train_df = pd.read_csv(csv_file)
+    max_len = np.max(train_df["text"].apply(lambda x: len(x.split())))
+    word2idx = json.load(open('../data/word2idx.json', 'r'))
 
-    vocab_size = len(json.load(open('../data/word2idx.json', 'r')))
+    for i in range(len(train_df)):
+        #Tokenize
+        train_df['text'].iloc[i] = train_df['text'].iloc[i].lower() 
+        train_df['text'].iloc[i] = [word2idx[word] if word in word2idx else word2idx["<unk>"] for word in train_df['text'].iloc[i].split()] #Tokenize
+        train_df['text'].iloc[i] = train_df['text'].iloc[i] + [word2idx["<pad>"]] * (max_len - len(train_df['text'].iloc[i]))
+        train_df['text'].iloc[i] = torch.tensor(train_df['text'].iloc[i])
+
+    vocab_size = len(word2idx)
     embedding_dim = 128
     output_dim = 2400
     encoder = SentenceEncoder(vocab_size, embedding_dim, output_dim)
-    encoder.load_state_dict(torch.load("model_enc.pt"))
+    encoder.load_state_dict(torch.load("output/model_encoder.pt"))
 
-    for i in range(len(dataset.df)):
-        dataset.df['text'].iloc[i] = encoder(dataset.df['text'].iloc[i].unsqueeze(0)).detach().numpy()
+    for i in range(len(train_df)):
+        #Encode
+        train_df['text'].iloc[i] = encoder(train_df['text'].iloc[i].unsqueeze(0)).detach().numpy()
     
-    print(dataset.df.head())
 
-
-    X = np.array(dataset.df['text'].tolist())
+    X = np.array(train_df['text'].tolist())
     X = np.squeeze(X, axis=1)
-    y = np.array(dataset.df['coarse_label'].tolist())
+    y = np.array(train_df['coarse_label'].tolist())
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
