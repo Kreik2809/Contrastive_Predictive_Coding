@@ -28,19 +28,21 @@ class AutoregressiveGRU(nn.Module):
         return x
 
 class CpcModel(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, output_dim, hidden_dim):
+    def __init__(self, device, vocab_size, embedding_dim, output_dim, hidden_dim):
         super(CpcModel, self).__init__()
+        self.device = device
         self.encoder = SentenceEncoder(vocab_size, embedding_dim, output_dim)
         self.ar = AutoregressiveGRU(output_dim, hidden_dim)
-        #create a linear layer for each step
         self.W = nn.Linear(hidden_dim+1, hidden_dim) 
+
     
     def forward(self, x):
         #x is a list containing x_hist, x_pos, x_neg, step which are all tensors
-        x_hist = x[0] #64 10 132
-        x_pos = x[1].unsqueeze(1) #64 1 132
-        x_neg = x[2] #64 10 132 #concatenate 
-        step = x[3]
+        x_hist = x[0].to(self.device) #64 10 132
+        x_pos = x[1].unsqueeze(1).to(self.device) #64 1 132
+        x_neg = x[2].to(self.device) #64 10 132 #concatenate 
+        step = x[3].to(self.device)
+
 
         #print(x_hist.shape) #64 10 132
         #print(x_pos.shape) #64 1 132

@@ -10,24 +10,27 @@ import matplotlib.pyplot as plt
 
 
 def train():
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(device)
     embedding_dim = 128
     output_dim = 2400
     hidden_dim = 2400
     batch_size = 2
-    epochs = 10
+    epochs = 50
     patience = 10
     history_len = 10
     negative_len = 10
     print("Starting")
     dataset = NLPDataset()
     print(dataset.get_len())
-    cpc_dataset = CPCDataset(dataset, 100)
+    cpc_dataset = CPCDataset(dataset)
     print("Dataset loaded")
     vocab_size = len(json.load(open('../data/word2idx.json', 'r')))
     
-    model = CpcModel(vocab_size, embedding_dim, output_dim, hidden_dim)
+    model = CpcModel(device, vocab_size, embedding_dim, output_dim, hidden_dim)
+    model = model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=10e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
     train_val_split = int(len(cpc_dataset) * 0.8)
     train_dataset, val_dataset = torch.utils.data.random_split(cpc_dataset, [train_val_split, len(cpc_dataset) - train_val_split])
@@ -51,7 +54,7 @@ def train():
             loss = loss.mean()
             loss.backward()
             optimizer.step()
-            loss_batch = np.append(loss_batch, [loss.detach().numpy()])
+            loss_batch = np.append(loss_batch, [loss.to('cpu').detach().numpy()])
             acc_batch = np.append(acc_batch, [train_accuracy])
 
         with torch.no_grad():
@@ -60,27 +63,37 @@ def train():
             for batch in val_data_loader:
                 val_loss, val_accuracy = model(batch)
                 val_loss = val_loss.mean()
-                val_loss_batch = np.append(val_loss_batch, [val_loss.detach().numpy()])
+                val_loss_batch = np.append(val_loss_batch, [val_loss.to('cpu').detach().numpy()])
                 val_acc_batch = np.append(val_acc_batch, [val_accuracy])
-   
-        if epoch == 0:
-            patience_counter = 0
-        elif val_loss_batch.mean() > val_loss_hist[-1]:
-            patience_counter += 1
-            if patience_counter == patience:
-                print("Early stopping")
-                break   
-        else:
-            patience_counter = 0
         
-        print("Epoch: {} Train Loss: {} Val Loss: {}".format(epoch, loss_batch.mean(), val_loss_batch.mean()))
-        print("Epoch: {} Train Accuracy: {} Val Accuracy: {}".format(epoch, acc_batch.mean(), val_acc_batch.mean()))
         train_loss_hist = np.append(train_loss_hist, loss_batch.mean())
         val_loss_hist = np.append(val_loss_hist, val_loss_batch.mean())
         train_accuracy_hist = np.append(train_accuracy_hist, acc_batch.mean())
         val_accuracy_hist = np.append(val_accuracy_hist, val_acc_batch.mean())
+   
+        if epoch == 0:
+            patience_counter = 0
+            best_model = model
+            best_val_loss = val_loss_hist[-1]
+            best_val_accuracy = val_accuracy_hist[-1]
 
-    model.save("output/model")
+        elif val_loss_batch.mean() > best_val_loss:
+            patience_counter += 1
+            if patience_counter == patience:
+                break   
+        
+        else:
+            patience_counter = 0
+            best_model = model
+            best_val_loss = val_loss_hist[-1]
+            best_val_accuracy = val_accuracy_hist[-1]
+
+        print("Epoch: {} Train Loss: {} Val Loss: {}".format(epoch, loss_batch.mean(), val_loss_batch.mean()))
+        print("Epoch: {} Train Accuracy: {} Val Accuracy: {}".format(epoch, acc_batch.mean(), val_acc_batch.mean()))
+        
+
+    print("Saving model with val loss: {} and val accuracy: {}".format(best_val_loss, best_val_accuracy))
+    best_model.save("output/model")
 
     plt.figure(figsize=(10,10))
     plt.plot(train_loss_hist, label="Train Loss")

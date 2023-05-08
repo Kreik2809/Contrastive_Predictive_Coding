@@ -55,7 +55,7 @@ class NLPDataset():
             reader = csv.reader(file)
             row_count = sum(1 for row in reader)
         return row_count
-               
+            
     def get_item(self, idx):
         with open(self.csv_file, 'r') as file:
             line = linecache.getline(self.csv_file, idx)
@@ -70,21 +70,23 @@ class NLPDataset():
 class CPCDataset(Dataset):
     """ This dataset contains the triplets (history, positive, negative) indexes for contrastive learning
     """
-    def __init__(self, dataset, learning_sample_len, history_samples=10, prediction_len=3, negative_samples=10):
+    def __init__(self, dataset, history_samples=10, prediction_len=3, negative_samples=10):
         self.dataset = dataset
-        self.learning_sample_len = learning_sample_len
         len_dataset = self.dataset.get_len() #Len of the dataset containing the sentences
+        len_learning_sample = len_dataset - history_samples - prediction_len #Len of the contrastive dataset
         self.history_samples = history_samples
         self.prediction_len = prediction_len
         self.contrastive_dataset = pd.DataFrame(columns=['history','positive','negative', 'step'])
-        for _ in range(self.learning_sample_len):
-            t = random.randint(2, len_dataset - history_samples - prediction_len)
+        for i in range(2, len_learning_sample):
+            if (i % 1000 == 0):
+                print(str(i)+"/"+str(len_learning_sample))
             prediction_step = random.randint(1, prediction_len)
-            history_idx = [t+j for j in range(history_samples)]
-            positive_idx = t+history_samples+prediction_step-1
+            history_idx = [i+j for j in range(history_samples)]
+            positive_idx = i+history_samples+prediction_step-1
             possible_negs = list(set(range(2, len_dataset)) - set(history_idx) - set([positive_idx]))
             negative_idx = random.sample(possible_negs, negative_samples)
             self.contrastive_dataset = pd.concat([self.contrastive_dataset, pd.DataFrame([[history_idx, positive_idx, negative_idx, prediction_step]], columns=['history','positive','negative', 'step'])])
+        self.contrastive_dataset.to_json('../data/contrastive_dataset.json', orient='records')
 
     def __len__(self):
         return len(self.contrastive_dataset)
@@ -99,7 +101,7 @@ class CPCDataset(Dataset):
 
 if __name__ == "__main__":
     #download_dataset("trec")
-    #download_dataset("bookcorpus", subset_size = 0.1, test=False)
+    download_dataset("bookcorpus", subset_size = 0.0001, test=False)
     #tokenizeDataset("../data/bookcorpus_train.csv")
 
     """
