@@ -11,6 +11,8 @@ from torch.utils.data import Dataset
 from datasets import load_dataset
 
 def download_dataset(dataset_name="bookcorpus", subset_size=None, test=True):
+    """ Download the dataset and save it in a csv file
+    """
     if (not os.path.exists('../data')):
         os.makedirs('../data')
     ds = load_dataset(dataset_name)
@@ -25,6 +27,8 @@ def download_dataset(dataset_name="bookcorpus", subset_size=None, test=True):
         test_ds.to_csv('../data/'+dataset_name+'_test.csv', index=False)
 
 def tokenizeDataset(csv_file):
+    """ Tokenize the dataset and save the word2idx and idx2word dictionaries
+    """
     df = pd.read_csv(csv_file)
     word2idx = dict()
     word2idx['<pad>'] = 0
@@ -47,16 +51,20 @@ class NLPDataset():
     """
     def __init__(self, csv_file="../data/bookcorpus_train_reduce.csv"):
         self.csv_file = csv_file
-        self.longest_sent = 132 #TODO : find a way to get this value automatically
+        self.longest_sent = 132 #Longest sentence in the dataset
         self.word2idx = json.load(open('../data/word2idx.json', 'r'))
     
     def get_len(self):
+        """ Return the number of sentences in the dataset
+        """
         with open(self.csv_file, 'r') as file:
             reader = csv.reader(file)
             row_count = sum(1 for row in reader)
         return row_count
             
     def get_item(self, idx):
+        """ Return the tokenized sentence at the given index
+        """
         with open(self.csv_file, 'r') as file:
             line = linecache.getline(self.csv_file, idx)
             reader = csv.reader([line])
@@ -89,9 +97,13 @@ class CPCDataset(Dataset):
         self.contrastive_dataset.to_json('../data/contrastive_dataset.json', orient='records')
 
     def __len__(self):
+        """ Return the number of triplets in the dataset
+        """
         return len(self.contrastive_dataset)
 
     def __getitem__(self, idx):
+        """ Return the triplet at the given index
+        """
         row = self.contrastive_dataset.iloc[idx]
         history = torch.stack([self.dataset.get_item(i) for i in row['history']])
         positive = self.dataset.get_item(row['positive'])
@@ -103,13 +115,3 @@ if __name__ == "__main__":
     #download_dataset("trec")
     download_dataset("bookcorpus", subset_size = 0.0001, test=False)
     #tokenizeDataset("../data/bookcorpus_train.csv")
-
-    """
-    print("Starting")
-    dataset = NLPDataset()
-    print(dataset.get_len())
-    cpc_dataset = CPCDataset(dataset, 1)
-    print(cpc_dataset.contrastive_dataset.iloc[0])
-    print(cpc_dataset[0])
-    print("Done")
-    """

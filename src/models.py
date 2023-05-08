@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 
 class SentenceEncoder(nn.Module):
+    """ Sentence Encoder from CPC paper
+    """
     def __init__(self, vocab_size, embedding_dim, output_dim):
         super(SentenceEncoder, self).__init__()
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
@@ -9,7 +11,6 @@ class SentenceEncoder(nn.Module):
         self.relu = nn.ReLU()
     
     def forward(self, x):
-        #x is a tensor of size (batch_size, elem_seq, seq_len)
         embeddings = self.embedding(x)
         embeddings = torch.permute(embeddings, (0, 2, 1))
         conv_out = self.conv1(embeddings)
@@ -19,6 +20,8 @@ class SentenceEncoder(nn.Module):
         return z
 
 class AutoregressiveGRU(nn.Module):
+    """ Autoregressive GRU from CPC paper
+    """
     def __init__(self, input_dim, hidden_dim):
         super(AutoregressiveGRU, self).__init__()
         self.gru = nn.GRU(input_dim, hidden_dim, batch_first=True)
@@ -28,6 +31,8 @@ class AutoregressiveGRU(nn.Module):
         return x
 
 class CpcModel(nn.Module):
+    """ CPC Model from CPC paper
+    """
     def __init__(self, device, vocab_size, embedding_dim, output_dim, hidden_dim):
         super(CpcModel, self).__init__()
         self.device = device
@@ -37,25 +42,18 @@ class CpcModel(nn.Module):
 
     
     def forward(self, x):
-        #x is a list containing x_hist, x_pos, x_neg, step which are all tensors
+        #x is a list containing x_hist, x_pos, x_neg, step. They are all tensors
         x_hist = x[0].to(self.device) #64 10 132
         x_pos = x[1].unsqueeze(1).to(self.device) #64 1 132
-        x_neg = x[2].to(self.device) #64 10 132 #concatenate 
-        step = x[3].to(self.device)
-
-
-        #print(x_hist.shape) #64 10 132
-        #print(x_pos.shape) #64 1 132
-        #print(x_neg.shape) #64 10 132
+        x_neg = x[2].to(self.device) #64 10 132
+        step = x[3].to(self.device) #64
 
         hist_size = x_hist.shape[1]
         pos_size = x_pos.shape[1]
         neg_size = x_neg.shape[1]
         batch_size = x_hist.shape[0]
 
-        #concat x_hist and x_pos and x_neg along axis 1
         x = torch.cat((x_hist, x_pos, x_neg), dim=1) #64 21 132
-        #print(x.shape) #64 21 132
         total_size = x.shape[1]
 
         #encode x
@@ -68,10 +66,6 @@ class CpcModel(nn.Module):
         z_pos = z[:, hist_size:hist_size+pos_size, :] #64 1 2400
         z_neg = z[:, hist_size+pos_size:, :] #64 10 2400
 
-        #print(z_hist.shape)
-        #print(z_pos.shape)
-        #print(z_neg.shape)
-
         c_t = self.ar(z_hist) 
         c_t = c_t.squeeze(0)    
 
@@ -82,7 +76,6 @@ class CpcModel(nn.Module):
         #print(z_pos.shape) #64 1 2400
         #print(z_neg.shape) #64 10 2400
 
-        #perform elementwise multiplication between preds and z_pos and z_neg
         f_pos = torch.exp(torch.bmm(preds.unsqueeze(1), z_pos.permute(0, 2, 1)).squeeze(1))
         f_neg = torch.exp(torch.bmm(preds.unsqueeze(1), z_neg.permute(0, 2, 1)).squeeze(1))
 
@@ -104,7 +97,6 @@ class CpcModel(nn.Module):
         self.load_state_dict(torch.load(path))
                
 
-        
 if __name__ == "__main__":
     sentence = "Hello I am Nicolas"
     tokenized_sentence = [1,2,3,4]

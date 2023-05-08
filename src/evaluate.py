@@ -1,23 +1,22 @@
 import torch
 
 import numpy as np
-
-from dataset import *
-from models import *
-from tqdm import tqdm
-
 import matplotlib.pyplot as plt
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from dataset import *
+from models import *
+from tqdm import tqdm
+
 
 def eval(encoder, train_df, test_df):
-    #make copy of df
+    """ Evaluate the learned representation of the encoder using a logistic regression
+    """
     train_df_copy = train_df.copy()
     test_df_copy = test_df.copy()
     for i in range(len(train_df_copy)):
-        #Encode
         train_df_copy['text'].iloc[i] = encoder(train_df_copy['text'].iloc[i].unsqueeze(0)).detach().numpy()
     
     X_train = np.array(train_df_copy['text'].tolist())
@@ -28,9 +27,7 @@ def eval(encoder, train_df, test_df):
 
     clf.fit(X_train, y_train)
 
-
     for i in range(len(test_df)):
-        #Encode
         test_df_copy['text'].iloc[i] = encoder(test_df_copy['text'].iloc[i].unsqueeze(0)).detach().numpy()
     
     X_test = np.array(test_df_copy['text'].tolist())
@@ -76,11 +73,9 @@ def main():
 
     random_train_acc, random_test_acc = eval(encoder, train_df, test_df)
 
-    #load encoder from '../models/encoder.pt'
     encoder.load_state_dict(torch.load('output/model_encoder.pt', map_location=torch.device('cpu')))
     train_acc, test_acc = eval(encoder, train_df, test_df)
 
-    #plot a table in output folder with the results
     fig, ax = plt.subplots()
     ax.axis('tight')
     ax.axis('off')

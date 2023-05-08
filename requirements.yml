@@ -6,44 +6,21 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - ca-certificates=2023.01.10=h06a4308_0
-  - certifi=2022.12.7=py39h06a4308_0
-  - cpuonly=2.0=0
-  - cycler=0.11.0=pyhd3eb1b0_0
-  - dataclasses=0.8=pyhc8e2a94_3
-  - datasets=2.11.0=py_0
-  - ffmpeg=4.2.2=h20bf706_0
-  - huggingface_hub=0.14.1=py_0
-  - jedi=0.18.1=py39h06a4308_1
-  - jpeg=9e=h7f8727e_0
-  - matplotlib=3.5.1=py39h06a4308_1
-  - matplotlib-base=3.5.1=py39ha18d171_1
-  - matplotlib-inline=0.1.6=py39h06a4308_0
-  - numexpr=2.8.4=py39he184ba9_0
-  - numpy=1.23.4=py39h14f4228_0
-  - numpy-base=1.23.4=py39h31eccc5_0
-  - openh264=2.1.1=h4ff587b_0
-  - openssl=1.1.1t=h7f8727e_0
-  - pandas=1.5.3=py39h417a72b_0
-  - pillow=9.2.0=py39hace64e9_1
-  - pip=22.2.2=py39h06a4308_0
-  - python=3.9.15=h7a1cb2a_2
-  - python-dateutil=2.8.2=pyhd3eb1b0_0
-  - python-xxhash=3.0.0=py39hb9d737c_1
-  - python_abi=3.9=2_cp39
-  - pytorch=1.10.1=py3.9_cpu_0
-  - pytorch-mutex=1.0=cpu
-  - scikit-learn=1.2.2=py39h6a678d5_0
-  - scipy=1.10.1=py39h14f4228_0
-  - six=1.16.0=pyhd3eb1b0_1
-  - torchaudio=0.10.1=py39_cpu
-  - torchvision=0.11.2=py39_cpu
-  - tornado=6.2=py39h5eee18b_0
-  - yaml=0.2.5=h7f98852_2
+  - python=3.9.15
+  - datasets=2.11.0
+  - huggingface_hub=0.14.1
+  - matplotlib=3.5.1
+  - matplotlib-base=3.5.1
+  - matplotlib-inline=0.1.6
+  - numpy=1.23.4
+  - numpy-base=1.23.4
+  - pandas=1.5.3
+  - pytorch=1.11.0
+  - torchvision=0.12.0
+  - cudatoolkit=11.3
+  - scikit-learn=1.2.2
+  - scipy=1.10.1
   - pip:
       - charset-normalizer==2.1.1
-      - decorator==4.4.2
-      - iniconfig==1.1.1
-      - py==1.11.0
       - tqdm==4.64.1
       - urllib3==1.26.13

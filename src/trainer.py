@@ -1,15 +1,15 @@
 import torch
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from dataset import *
 from models import *
 from tqdm import tqdm
 
-import matplotlib.pyplot as plt
-
-
 def train():
+    """ Train the CPC model
+    """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
     embedding_dim = 128
