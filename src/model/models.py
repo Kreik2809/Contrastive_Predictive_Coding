@@ -6,7 +6,7 @@ class SentenceEncoder(nn.Module):
     """
     def __init__(self, vocab_size, embedding_dim, output_dim):
         super(SentenceEncoder, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        self.embedding = nn.Embedding(vocab_size, embedding_dim).requires_grad_(False)
         self.conv1 = nn.Conv1d(embedding_dim, output_dim, 3, padding=1)
         self.relu = nn.ReLU()
     
@@ -19,16 +19,16 @@ class SentenceEncoder(nn.Module):
         z = pooled.squeeze(2)
         return z
 
-class AutoregressiveGRU(nn.Module):
-    """ Autoregressive GRU from CPC paper
+class AutoregressiveLSTM(nn.Module):
+    """ Autoregressive LSTM from CPC paper
     """
     def __init__(self, input_dim, hidden_dim):
-        super(AutoregressiveGRU, self).__init__()
-        self.gru = nn.GRU(input_dim, hidden_dim, batch_first=True)
+        super(AutoregressiveLSTM, self).__init__()
+        self.LSTM = nn.LSTM(input_dim, hidden_dim, batch_first=True)
     
     def forward(self, x):
-        _, x = self.gru(x)
-        return x
+        output, (hidden, cell)  = self.LSTM(x)
+        return hidden + output.sum(1)
 
 class CpcModel(nn.Module):
     """ CPC Model from CPC paper
@@ -36,17 +36,20 @@ class CpcModel(nn.Module):
     def __init__(self, device, vocab_size, embedding_dim, output_dim, hidden_dim):
         super(CpcModel, self).__init__()
         self.device = device
-        self.encoder = SentenceEncoder(vocab_size, embedding_dim, output_dim)
-        self.ar = AutoregressiveGRU(output_dim, hidden_dim)
-        self.W = nn.Linear(hidden_dim+1, hidden_dim) 
-
-    
+        self.vocab_size = vocab_size
+        self.embedding_dim = embedding_dim
+        self.output_dim = output_dim
+        self.hidden_dim = hidden_dim
+        self.encoder = SentenceEncoder(vocab_size, embedding_dim, output_dim).to(self.device, non_blocking=False)
+        self.ar = AutoregressiveLSTM(output_dim, hidden_dim).to(self.device, non_blocking=False)
+        self.W = nn.Linear(hidden_dim+1, hidden_dim).to(self.device, non_blocking=False)   
+        
     def forward(self, x):
         #x is a list containing x_hist, x_pos, x_neg, step. They are all tensors
-        x_hist = x[0].to(self.device) #64 10 132
-        x_pos = x[1].unsqueeze(1).to(self.device) #64 1 132
-        x_neg = x[2].to(self.device) #64 10 132
-        step = x[3].to(self.device) #64
+        x_hist = x[0].to(self.device, non_blocking=False) #64 10 132
+        x_pos = x[1].unsqueeze(1).to(self.device, non_blocking=False) #64 1 132
+        x_neg = x[2].to(self.device, non_blocking=False) #64 10 132
+        step = x[3].to(self.device, non_blocking=False) #64
 
         hist_size = x_hist.shape[1]
         pos_size = x_pos.shape[1]
@@ -88,26 +91,15 @@ class CpcModel(nn.Module):
 
         return -loss, accuracy
 
-    def save(self, file_name):
-        torch.save(self.encoder.state_dict(), file_name + "_encoder.pt")
-        torch.save(self.ar.state_dict(), file_name + "_ar.pt")
-        torch.save(self.state_dict(), file_name+".pt")
+    def save(self, model_dir, models_file_prefix):
+        torch.save(self.encoder.state_dict(), model_dir + models_file_prefix + "_encoder.pt")
+        torch.save(self.ar.state_dict(), model_dir+models_file_prefix + "_ar.pt")
+        torch.save(self.state_dict(), model_dir+models_file_prefix+".pt")
     
-    def load(self, path):
-        self.load_state_dict(torch.load(path))
-               
+    def load(self, model_dir, model_file):
+        self.load_state_dict(torch.load(model_dir + model_file))
 
-if __name__ == "__main__":
-    sentence = "Hello I am Nicolas"
-    tokenized_sentence = [1,2,3,4]
-    tokenized_sentence = torch.tensor(tokenized_sentence)
-    batch = torch.stack([tokenized_sentence, tokenized_sentence, tokenized_sentence])
-    model = SentenceEncoder(5, 128, 2400)
-    output = model(batch)
-    print(output.shape)
-    print(output.unsqueeze(0).shape)
-    model = AutoregressiveGRU(2400, 2400)
-    output = model(output.unsqueeze(0)) #batch dim
-    print(output)
-    print(output.shape)
-    
+    def summary(self):
+        print(self.encoder)
+        print(self.ar)
+        print(self.W)
