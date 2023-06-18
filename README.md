@@ -4,8 +4,8 @@
 - Link to the original [paper](https://arxiv.org/abs/1807.03748)
 
 ## Results
-- The model has been trained on a limited subset of the bookcorpus dataset due to computational constraints.
-- The sentence encoder, with both random and trained weights, was evaluated using the TREC dataset with coarse labels.
+- The model has been trained on a limited subset of the bookcorpus dataset due to computational constraints
+- The sentence encoder, with both random and trained weights, was evaluated using the TREC dataset with coarse labels
 
 ### Train results
 Loss          |  Accuracy
