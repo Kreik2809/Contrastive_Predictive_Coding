@@ -42,6 +42,7 @@ def main():
     if config["train"]:
         print("Training...")
         device = torch.device(config["device"])
+        print("Device : " + str(device))
         torch.manual_seed(config["seed"])
         train_dataset = NLPDataset(data_dir, train_dataset_file+"_train.csv", train_dataset_file+"_word2idx.json", 132)
         cpc_dataset = CPCDataset(train_dataset, config["history_samples"], config["prediction_length"], config["negative_samples"], generate_cpc_dataset, data_dir, config["cpc_dataset_file"])
